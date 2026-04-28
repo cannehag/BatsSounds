@@ -1,0 +1,1389 @@
+<Window x:Class="Bats_Sounds.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:Bats_Sounds.Converters"
+        xmlns:vm="clr-namespace:Bats_Sounds.ViewModels"
+        xmlns:ctrl="clr-namespace:Bats_Sounds.Controls"
+        Title="Bats - Sound Control"
+        Icon="pack://application:,,,/Bats-K.ico"
+        Width="900" Height="620"
+        MinWidth="700" MinHeight="450"
+        Background="#111111"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <conv:NullToVisibilityConverter x:Key="NullToVis" />
+        <conv:InverseBoolConverter x:Key="InverseBool" />
+        <conv:BoolToColorConverter x:Key="InverseBoolToVis"
+            TrueValue="{x:Static Visibility.Collapsed}"
+            FalseValue="{x:Static Visibility.Visible}" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+        </Style>
+
+        <Style x:Key="SidebarButton" TargetType="Button">
+            <Setter Property="Background" Value="#222222" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="12,14" />
+            <Setter Property="Margin" Value="0,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.65" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+            <Setter Property="Background" Value="#C9A84C" />
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="Padding" Value="12,18" />
+        </Style>
+
+        <Style x:Key="LoadButton" TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+            <Setter Property="Background" Value="#C9A84C" />
+            <Setter Property="Foreground" Value="#111111" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#1C1C1C" />
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="BorderBrush" Value="#444444" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="CaretBrush" Value="#DDDDDD" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="PlayerItem" TargetType="ListBoxItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="4" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <!-- Grid fills the full UniformGrid cell; Border sits top-aligned at content height -->
+                        <Grid>
+                            <Border x:Name="ItemBorder"
+                                    Background="#1C1C1C"
+                                    CornerRadius="10"
+                                    Padding="10,12"
+                                    VerticalAlignment="Top">
+                                <ContentPresenter />
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#2A2A2A" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#2C2000" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Visible" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource PlayerItem}" />
+        </Style>
+
+        <!-- Scrollbar theme -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="MinWidth" Value="8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid x:Name="Root">
+                            <Border Background="#1A1A1A" CornerRadius="4" />
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand"
+                                                  Opacity="0" Focusable="False" IsTabStop="False" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border x:Name="Bd"
+                                                        Background="#3A3A3A"
+                                                        CornerRadius="3"
+                                                        Margin="2,3" />
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#C9A84C" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#A08030" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand"
+                                                  Opacity="0" Focusable="False" IsTabStop="False" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter TargetName="Root" Property="LayoutTransform">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="-90" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Height" Value="8" />
+                    <Setter Property="MinHeight" Value="8" />
+                    <Setter Property="Width" Value="Auto" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="200" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- TOP BAR -->
+        <Border Grid.Column="0" Grid.Row="0"
+                Background="#1C1C1C"
+                Padding="12,10"
+                Margin="0,0,0,4">
+            <DockPanel>
+                <Button Style="{StaticResource LoadButton}"
+                        DockPanel.Dock="Right"
+                        Content="Load Roster"
+                        Command="{Binding LoadRosterCommand}"
+                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBool}}" />
+                <Button Style="{StaticResource SidebarButton}"
+                        DockPanel.Dock="Right"
+                        Content="↻"
+                        ToolTip="Re-fetch roster from URL"
+                        Command="{Binding RefreshRosterCommand}"
+                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBool}}"
+                        Margin="6,0,0,0"
+                        Padding="10,9"
+                        Background="#333333" />
+                <TextBox Text="{Binding RosterUrl, UpdateSourceTrigger=PropertyChanged}">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding LoadRosterCommand}" />
+                    </TextBox.InputBindings>
+                </TextBox>
+            </DockPanel>
+        </Border>
+
+        <!-- BATTERS SECTION -->
+        <DockPanel Grid.Column="0" Grid.Row="1">
+        <TextBlock DockPanel.Dock="Top"
+                   Text="BATTERS"
+                   FontSize="11"
+                   FontWeight="Bold"
+                   Foreground="#C9A84C"
+                   Margin="12,8,0,4" />
+
+        <!-- PLAYER GRID -->
+        <ListBox x:Name="PlayerList"
+                 ItemsSource="{Binding Players}"
+                 Margin="4,0,4,0"
+                 SizeChanged="PlayerList_SizeChanged"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="{Binding DataContext.GridColumns,
+                                            RelativeSource={RelativeSource AncestorType=ListBox}}" />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:PlayerViewModel}">
+                    <Grid>
+                        <!-- Play button — full card area, disabled when no config -->
+                        <Button Background="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                IsEnabled="{Binding HasConfig}"
+                                Command="{Binding DataContext.PlayPlayerCommand,
+                                          RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                CommandParameter="{Binding}"
+                                Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <ContentPresenter />
+                                </ControlTemplate>
+                            </Button.Template>
+                            <StackPanel HorizontalAlignment="Center">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasConfig}" Value="False">
+                                                <Setter Property="Opacity" Value="0.3" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+
+                                <!-- Avatar circle -->
+                                <Border Width="110" Height="110"
+                                        CornerRadius="55"
+                                        ClipToBounds="True"
+                                        Background="#222222"
+                                        HorizontalAlignment="Center">
+                                    <Grid>
+                                        <TextBlock Text="👤"
+                                                   FontSize="48"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                        <Image Source="{Binding ImagePath}"
+                                               Stretch="UniformToFill"
+                                               Visibility="{Binding ImagePath, Converter={StaticResource NullToVis}}" />
+                                        <!-- Equalizer overlay while this player's walkup song is active -->
+                                        <Border Background="#CC000000"
+                                                Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}">
+                                            <ctrl:EqualizerBars IsAnimating="{Binding IsPlaying}"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <!-- First name -->
+                                <TextBlock Text="{Binding FirstName}"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="#FFFFFF"
+                                           TextAlignment="Center"
+                                           Margin="0,8,0,0"
+                                           HorizontalAlignment="Center" />
+
+                                <!-- Last name -->
+                                <TextBlock Text="{Binding LastName}"
+                                           FontSize="14"
+                                           Foreground="#AAAAAA"
+                                           TextAlignment="Center"
+                                           Margin="0,1,0,0"
+                                           HorizontalAlignment="Center" />
+
+                                <!-- Config summary — always present to keep equal card height -->
+                                <TextBlock Text="{Binding ConfigSummary}"
+                                           FontSize="11"
+                                           Foreground="#C9A84C"
+                                           TextAlignment="Center"
+                                           HorizontalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxWidth="130"
+                                           Margin="0,6,0,0" />
+                                <TextBlock Text="{Binding Config.ArtistName}"
+                                           FontSize="11"
+                                           Foreground="#666666"
+                                           TextAlignment="Center"
+                                           HorizontalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxWidth="130"
+                                           Margin="0,2,0,0" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Edit button — top-right corner, always enabled -->
+                        <Button Panel.ZIndex="10"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,2,2,0"
+                                Cursor="Hand"
+                                ToolTip="Set Spotify track"
+                                Command="{Binding DataContext.OpenEditPlayerCommand,
+                                          RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                CommandParameter="{Binding}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd"
+                                            Background="#222222"
+                                            CornerRadius="5"
+                                            Padding="7,4">
+                                        <ContentPresenter HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#3A3A3A" />
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="Bd" Property="Opacity" Value="0.7" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <TextBlock FontSize="12">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="✎" />
+                                        <Setter Property="Foreground" Value="#666666" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasConfig}" Value="True">
+                                                <Setter Property="Foreground" Value="#C9A84C" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        </DockPanel>
+
+        <!-- Loading overlay -->
+        <Border Grid.Column="0" Grid.Row="1"
+                Background="#CC111111"
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="Loading roster..."
+                       FontSize="18"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Border>
+
+        <!-- PITCHER PANEL -->
+        <Border Grid.Column="0" Grid.Row="2"
+                Background="#0D0D0D"
+                BorderBrush="#2A2A2A"
+                BorderThickness="0,1,0,0">
+            <DockPanel>
+                <!-- PITCHERS headline -->
+                <TextBlock DockPanel.Dock="Top"
+                           Text="PITCHERS"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#C9A84C"
+                           Margin="12,8,0,4" />
+
+                <!-- Horizontal pitcher list -->
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal">
+                    <ItemsControl ItemsSource="{Binding Pitchers}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PitcherViewModel}">
+                                <Grid Margin="4">
+                                    <Border x:Name="CardBorder"
+                                            Background="#1C1C1C"
+                                            CornerRadius="10"
+                                            Padding="10,12">
+                                        <!-- Play button — full card area, disabled when no config -->
+                                        <Button Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0"
+                                                IsEnabled="{Binding HasConfig}"
+                                                Cursor="Hand"
+                                                Command="{Binding DataContext.PlayPitcherCommand,
+                                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <ContentPresenter />
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <StackPanel HorizontalAlignment="Center">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasConfig}" Value="False">
+                                                                <Setter Property="Opacity" Value="0.3" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+
+                                                <!-- Avatar circle -->
+                                                <Border Width="110" Height="110"
+                                                        CornerRadius="55"
+                                                        ClipToBounds="True"
+                                                        Background="#222222"
+                                                        HorizontalAlignment="Center">
+                                                    <Grid>
+                                                        <TextBlock Text="👤"
+                                                                   FontSize="48"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center" />
+                                                        <Image Source="{Binding ImagePath}"
+                                                               Stretch="UniformToFill"
+                                                               Visibility="{Binding ImagePath, Converter={StaticResource NullToVis}}" />
+                                                        <Border Background="#CC000000"
+                                                                Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}">
+                                                            <ctrl:EqualizerBars IsAnimating="{Binding IsPlaying}"
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center" />
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <TextBlock Text="{Binding FirstName}"
+                                                           FontSize="15"
+                                                           FontWeight="Bold"
+                                                           Foreground="#FFFFFF"
+                                                           TextAlignment="Center"
+                                                           Margin="0,8,0,0"
+                                                           HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding LastName}"
+                                                           FontSize="14"
+                                                           Foreground="#AAAAAA"
+                                                           TextAlignment="Center"
+                                                           Margin="0,1,0,0"
+                                                           HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding ConfigSummary}"
+                                                           FontSize="11"
+                                                           Foreground="#C9A84C"
+                                                           TextAlignment="Center"
+                                                           HorizontalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxWidth="130"
+                                                           Margin="0,6,0,0" />
+                                                <TextBlock Text="{Binding Config.ArtistName}"
+                                                           FontSize="11"
+                                                           Foreground="#666666"
+                                                           TextAlignment="Center"
+                                                           HorizontalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxWidth="130"
+                                                           Margin="0,2,0,0" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Border>
+
+                                    <!-- Edit button (top-right) -->
+                                    <Button Panel.ZIndex="10"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Margin="0,6,6,0"
+                                            Cursor="Hand"
+                                            Command="{Binding DataContext.OpenEditPitcherCommand,
+                                                      RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="Bd" Background="#222222"
+                                                        CornerRadius="5" Padding="7,4">
+                                                    <ContentPresenter HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#3A3A3A" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter TargetName="Bd" Property="Opacity" Value="0.7" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                        <TextBlock FontSize="12">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="✎" />
+                                                    <Setter Property="Foreground" Value="#666666" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasConfig}" Value="True">
+                                                            <Setter Property="Foreground" Value="#C9A84C" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Button>
+
+                                    <!-- Remove button (top-left) -->
+                                    <Button Panel.ZIndex="10"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            Margin="6,6,0,0"
+                                            Cursor="Hand"
+                                            Command="{Binding DataContext.RemovePitcherCommand,
+                                                      RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="Bd" Background="#222222"
+                                                        CornerRadius="5" Padding="7,4">
+                                                    <ContentPresenter HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#5A1A1A" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                        <TextBlock Text="✕" FontSize="12" Foreground="#666666" />
+                                    </Button>
+                                </Grid>
+                                <DataTemplate.Triggers>
+                                    <Trigger SourceName="CardBorder" Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="CardBorder" Property="Background" Value="#2A2A2A" />
+                                    </Trigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Add pitcher card — subtle, always last in the list -->
+                    <Button Margin="4"
+                            VerticalAlignment="Stretch"
+                            Cursor="Hand"
+                            BorderThickness="0"
+                            Command="{Binding OpenSelectPitcherCommand}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="AddBd"
+                                        Background="#161616"
+                                        CornerRadius="10"
+                                        Padding="10,12">
+                                    <ContentPresenter HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="AddBd" Property="Background" Value="#222222" />
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="AddBd" Property="Opacity" Value="0.7" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <StackPanel HorizontalAlignment="Center">
+                            <Border Width="110" Height="110"
+                                    CornerRadius="55"
+                                    Background="#1C1C1C"
+                                    HorizontalAlignment="Center">
+                                <TextBlock Text="+"
+                                           FontSize="52"
+                                           Foreground="#3A3A3A"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="Add"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="#3A3A3A"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,8,0,0" />
+                            <TextBlock Text="pitcher"
+                                       FontSize="14"
+                                       Foreground="#2A2A2A"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,1,0,0" />
+                        </StackPanel>
+                    </Button>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- STATUS BAR -->
+        <Border Grid.Column="0" Grid.Row="3"
+                Background="#1C1C1C"
+                Padding="12,6"
+                Margin="0,4,0,0">
+            <TextBlock Text="{Binding StatusMessage}"
+                       FontSize="12"
+                       Foreground="#888888"
+                       TextTrimming="CharacterEllipsis" />
+        </Border>
+
+        <!-- SIDEBAR -->
+        <Border Grid.Column="1" Grid.Row="0" Grid.RowSpan="4"
+                Background="#0A0A0A"
+                Padding="12,16">
+            <StackPanel>
+                <!-- BATS-K Branding -->
+                <StackPanel Margin="0,0,0,14">
+                    <Image Source="pack://application:,,,/Bats-K.png"
+                           Width="90" Height="90"
+                           HorizontalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Rectangle Height="1" Fill="#333333" Margin="0,10,0,0" />
+                </StackPanel>
+
+                <TextBlock Text="SOUNDS"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#555555"
+                           Margin="0,0,0,8" />
+
+                <ItemsControl ItemsSource="{Binding SoundButtons}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:SoundButtonViewModel}">
+                            <Grid Margin="0,3">
+                                <!-- Main play button -->
+                                <Button Background="{Binding ButtonColor}"
+                                        Foreground="#FFFFFF"
+                                        FontFamily="Segoe UI"
+                                        BorderThickness="0"
+                                        Padding="12,14"
+                                        Cursor="Hand"
+                                        Command="{Binding DataContext.PlaySoundButtonCommand,
+                                                  RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="Bd"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="8"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Opacity" Value="0.85" />
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter TargetName="Bd" Property="Opacity" Value="0.65" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <StackPanel>
+                                        <ctrl:EqualizerBars
+                                            IsAnimating="{Binding IsPlaying}"
+                                            HorizontalAlignment="Center"
+                                            Margin="0,2,0,4"
+                                            Visibility="{Binding IsPlaying,
+                                                         Converter={StaticResource BoolToVis}}" />
+                                        <TextBlock Text="{Binding Emoji}"
+                                                   FontSize="24"
+                                                   HorizontalAlignment="Center"
+                                                   Visibility="{Binding IsPlaying,
+                                                                Converter={StaticResource InverseBoolToVis}}" />
+                                        <TextBlock Text="{Binding Label}"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- Edit button -->
+                                <Button Panel.ZIndex="10"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="0,5,5,0"
+                                        Cursor="Hand"
+                                        ToolTip="Configure sound"
+                                        Command="{Binding DataContext.OpenEditSoundButtonCommand,
+                                                  RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="Bd" Background="#00000000"
+                                                    CornerRadius="4" Padding="6,3">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#33000000" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <TextBlock FontSize="12">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="✎" />
+                                                <Setter Property="Foreground" Value="#AAAAAA" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasConfig}" Value="True">
+                                                        <Setter Property="Foreground" Value="#C9A84C" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Separator Background="#333333" Margin="0,16" />
+
+                <TextBlock Text="SPOTIFY"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#555555"
+                           Margin="0,0,0,8" />
+
+                <!-- Not connected -->
+                <Button Style="{StaticResource SidebarButton}"
+                        Background="#1A1A1A"
+                        Command="{Binding ConnectSpotifyCommand}"
+                        IsEnabled="{Binding IsConnectingSpotify, Converter={StaticResource InverseBool}}"
+                        Visibility="{Binding IsSpotifyAuthenticated, Converter={StaticResource InverseBoolToVis}}">
+                    <StackPanel>
+                        <TextBlock Text="🔗" FontSize="20" HorizontalAlignment="Center" />
+                        <TextBlock FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Connect Spotify" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnectingSpotify}" Value="True">
+                                            <Setter Property="Text" Value="Waiting for login..." />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+
+                <!-- Connected -->
+                <StackPanel Visibility="{Binding IsSpotifyAuthenticated, Converter={StaticResource BoolToVis}}">
+                    <!-- Play / Pause — hidden while a walkup/button sound is active -->
+                    <Button Style="{StaticResource SidebarButton}"
+                            Background="#C9A84C"
+                            Foreground="#111111"
+                            Command="{Binding ToggleSpotifyCommand}"
+                            Visibility="{Binding IsAnySourcePlaying,
+                                         Converter={StaticResource InverseBoolToVis}}">
+                        <StackPanel>
+                            <ctrl:EqualizerBars IsAnimating="{Binding IsPlaylistPlaying}"
+                                                HorizontalAlignment="Center"
+                                                Margin="0,2,0,4" />
+                            <TextBlock FontSize="12" HorizontalAlignment="Center" Foreground="#111111">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="Play / Pause" />
+                                        <Setter Property="Foreground" Value="#111111" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasPlaylistResume}" Value="True">
+                                                <Setter Property="Text" Value="▶  Resume Playlist" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Playlist section header -->
+                    <TextBlock Text="PLAYLIST"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               Foreground="#555555"
+                               Margin="0,14,0,6" />
+
+                    <!-- Playlist info card — name is static until user changes it -->
+                    <Border Background="#1C1C1C" CornerRadius="8" Padding="10,8">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SavedPlaylistName}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#FFFFFF" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SavedPlaylistName}" Value="">
+                                                <Setter Property="Text" Value="No playlist set" />
+                                                <Setter Property="Foreground" Value="#555555" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding CurrentTrackInfo}"
+                                       FontSize="11"
+                                       Foreground="#888888"
+                                       TextTrimming="CharacterEllipsis"
+                                       Margin="0,3,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CurrentTrackInfo}" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Change playlist button — below the name card -->
+                    <Button Style="{StaticResource SidebarButton}"
+                            Background="#2A2A2A"
+                            Padding="8,7"
+                            Margin="0,4,0,0"
+                            FontSize="11"
+                            Command="{Binding OpenChangePlaylistCommand}">
+                        <TextBlock Text="✎  Change Playlist" FontSize="11" HorizontalAlignment="Center" />
+                    </Button>
+                </StackPanel>
+
+                <!-- Legend -->
+                <Border Margin="0,24,0,0" Padding="8" Background="#1C1C1C" CornerRadius="6">
+                    <StackPanel>
+                        <TextBlock Text="LEGEND" FontSize="10" Foreground="#555555"
+                                   FontWeight="Bold" Margin="0,0,0,6" />
+                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                            <TextBlock Text="✎" FontSize="11" Foreground="#C9A84C" VerticalAlignment="Center" />
+                            <TextBlock Text="  Track configured" FontSize="11" Foreground="#888888" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                            <TextBlock Text="✎" FontSize="11" Foreground="#666666" VerticalAlignment="Center" />
+                            <TextBlock Text="  No track set" FontSize="11" Foreground="#888888" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+        <!-- CHANGE PLAYLIST POPUP -->
+        <Grid Grid.ColumnSpan="2" Grid.RowSpan="4"
+              Panel.ZIndex="20"
+              Visibility="{Binding IsChangePlaylistOpen, Converter={StaticResource BoolToVis}}">
+            <!-- Backdrop -->
+            <Rectangle Fill="#BB000000" />
+
+            <!-- Card -->
+            <Border Background="#1C1C1C"
+                    CornerRadius="12"
+                    Padding="24,20"
+                    Width="380"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="Change Playlist"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Margin="0,0,0,14" />
+
+                    <TextBlock Text="Paste a Spotify playlist URL or URI:"
+                               FontSize="11"
+                               Foreground="#888888"
+                               Margin="0,0,0,6" />
+
+                    <TextBox Text="{Binding ChangePlaylistUrl, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="13"
+                             Padding="10,8">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding ConfirmChangePlaylistCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Margin="0,14,0,0">
+                        <Button Style="{StaticResource SidebarButton}"
+                                Background="#2A2A2A"
+                                Padding="16,9"
+                                Margin="0,0,8,0"
+                                Command="{Binding CloseChangePlaylistCommand}">
+                            <TextBlock Text="Cancel" FontSize="13" />
+                        </Button>
+                        <Button Style="{StaticResource SidebarButton}"
+                                Background="#C9A84C"
+                                Foreground="#111111"
+                                Padding="16,9"
+                                Margin="0"
+                                Command="{Binding ConfirmChangePlaylistCommand}">
+                            <TextBlock Text="▶  Start" FontSize="13" FontWeight="SemiBold" Foreground="#111111" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+        <!-- CONFIRM REMOVE PITCHER -->
+        <Grid Grid.ColumnSpan="2" Grid.RowSpan="4"
+              Panel.ZIndex="25"
+              Visibility="{Binding IsConfirmRemovePitcherOpen, Converter={StaticResource BoolToVis}}">
+            <Rectangle Fill="#BB000000" />
+            <Border Background="#1C1C1C"
+                    CornerRadius="12"
+                    Padding="28,22"
+                    Width="340"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="Remove Pitcher"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="#FFFFFF"
+                               Margin="0,0,0,10" />
+                    <TextBlock FontSize="13"
+                               Foreground="#AAAAAA"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,20">
+                        <Run Text="Remove" />
+                        <Run Text="{Binding ConfirmRemovePitcherName}"
+                             FontWeight="SemiBold"
+                             Foreground="#FFFFFF" />
+                        <Run Text="from the pitcher list?" />
+                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource SidebarButton}"
+                                Background="#2A2A2A"
+                                Padding="16,9"
+                                Margin="0,0,8,0"
+                                Command="{Binding CancelRemovePitcherCommand}">
+                            <TextBlock Text="Cancel" FontSize="13" />
+                        </Button>
+                        <Button Style="{StaticResource SidebarButton}"
+                                Background="#8B0000"
+                                Padding="16,9"
+                                Command="{Binding ConfirmRemovePitcherCommand}">
+                            <TextBlock Text="Remove" FontSize="13" FontWeight="SemiBold" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- SELECT PITCHER POPUP -->
+        <Grid Grid.ColumnSpan="2" Grid.RowSpan="4"
+              Panel.ZIndex="20"
+              Visibility="{Binding IsSelectPitcherOpen, Converter={StaticResource BoolToVis}}">
+            <Rectangle Fill="#BB000000" />
+            <Border Background="#1C1C1C"
+                    CornerRadius="12"
+                    Padding="24,20"
+                    Width="460"
+                    MaxHeight="560"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Add Pitcher"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="#FFFFFF"
+                               Margin="0,0,0,14" />
+                    <Button DockPanel.Dock="Bottom"
+                            Style="{StaticResource SidebarButton}"
+                            Background="#2A2A2A"
+                            Padding="16,10"
+                            Margin="0,14,0,0"
+                            HorizontalAlignment="Right"
+                            Command="{Binding CloseSelectPitcherCommand}">
+                        <TextBlock Text="Cancel" FontSize="13" Foreground="#FFFFFF" />
+                    </Button>
+                    <Border BorderBrush="#333333" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+                        <ListBox x:Name="SelectPitcherList"
+                                 ItemsSource="{Binding Players}"
+                                 Background="#161616"
+                                 BorderThickness="0"
+                                 ScrollViewer.CanContentScroll="False"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 SelectionChanged="SelectPitcherList_SelectionChanged">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Padding" Value="12,10" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Cursor" Value="Hand" />
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#2C2C2C" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#2C2000" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:PlayerViewModel}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="46" Height="46"
+                                                CornerRadius="23"
+                                                ClipToBounds="True"
+                                                Background="#2A2A2A"
+                                                Margin="0,0,14,0"
+                                                VerticalAlignment="Center">
+                                            <Grid>
+                                                <TextBlock Text="👤" FontSize="22"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                                <Image Source="{Binding ImagePath}"
+                                                       Stretch="UniformToFill"
+                                                       Visibility="{Binding ImagePath,
+                                                                    Converter={StaticResource NullToVis}}" />
+                                            </Grid>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#FFFFFF" />
+                                            <TextBlock Text="{Binding ConfigSummary}"
+                                                       FontSize="11"
+                                                       Foreground="#C9A84C"
+                                                       Margin="0,2,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ConfigSummary}" Value="{x:Null}">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- PLAYING OVERLAY — full-screen modal while a walkup/sound is active -->
+        <Grid Grid.ColumnSpan="2" Grid.RowSpan="4"
+              Panel.ZIndex="30"
+              Visibility="{Binding IsAnySourcePlaying, Converter={StaticResource BoolToVis}}">
+            <Rectangle Fill="#DD111111" />
+            <Border Background="#1C1C1C"
+                    CornerRadius="16"
+                    Padding="40,36"
+                    Width="340"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <!-- Circular image or emoji -->
+                    <Border Width="130" Height="130"
+                            CornerRadius="65"
+                            ClipToBounds="True"
+                            Background="#2A2A2A"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,18">
+                        <Grid>
+                            <TextBlock Text="{Binding PlayingSourceEmoji}"
+                                       FontSize="60"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                            <Image Source="{Binding PlayingSourceImage}"
+                                   Stretch="UniformToFill"
+                                   Visibility="{Binding PlayingSourceImage,
+                                                Converter={StaticResource NullToVis}}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Name -->
+                    <TextBlock Text="{Binding PlayingSourceName}"
+                               FontSize="22"
+                               FontWeight="Bold"
+                               Foreground="#FFFFFF"
+                               TextAlignment="Center"
+                               HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="280" />
+
+                    <!-- Track -->
+                    <TextBlock Text="{Binding PlayingSourceTrack}"
+                               FontSize="14"
+                               Foreground="#C9A84C"
+                               TextAlignment="Center"
+                               HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="280"
+                               Margin="0,8,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PlayingSourceTrack}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Artist -->
+                    <TextBlock Text="{Binding PlayingSourceArtist}"
+                               FontSize="12"
+                               Foreground="#888888"
+                               TextAlignment="Center"
+                               HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="280"
+                               Margin="0,4,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PlayingSourceArtist}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Equalizer animation -->
+                    <ctrl:EqualizerBars IsAnimating="True"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,20,0,0" />
+
+                    <!-- Big STOP button -->
+                    <Button Style="{StaticResource SidebarButton}"
+                            Background="#8B0000"
+                            Padding="20,16"
+                            Margin="0,12,0,0"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding StopCurrentSoundCommand}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="⏹" FontSize="22" VerticalAlignment="Center" />
+                            <TextBlock Text="  STOP" FontSize="18" FontWeight="Bold"
+                                       VerticalAlignment="Center" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- EDIT SOUND POPUP (generic — players and sidebar buttons) -->
+        <Grid Grid.ColumnSpan="2" Grid.RowSpan="4"
+              Panel.ZIndex="20"
+              Visibility="{Binding IsEditSoundOpen, Converter={StaticResource BoolToVis}}">
+            <Rectangle Fill="#BB000000" />
+
+            <Border Background="#1C1C1C"
+                    CornerRadius="12"
+                    Padding="24,20"
+                    Width="420"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="{Binding EditSoundTitle, StringFormat='Edit: {0}'}"
+                               FontSize="16" FontWeight="Bold" Margin="0,0,0,14" />
+
+                    <!-- Current config preview -->
+                    <Border Background="#111111" CornerRadius="7" Padding="10,8"
+                            Margin="0,0,0,14"
+                            Visibility="{Binding EditCurrentConfig, Converter={StaticResource NullToVis}}">
+                        <StackPanel>
+                            <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="#C9A84C"
+                                       TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="{Binding EditCurrentConfig.TrackName}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EditCurrentConfig.TrackName}" Value="{x:Null}">
+                                                <Setter Property="Text" Value="{Binding EditCurrentConfig.Mp3FileName,
+                                                                                StringFormat='📂 {0}'}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding EditCurrentConfig.ArtistName}"
+                                       FontSize="11" Foreground="#888888" Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"
+                                       Visibility="{Binding EditCurrentConfig.ArtistName,
+                                                    Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Mode toggle -->
+                    <Border BorderBrush="#333333" BorderThickness="1" CornerRadius="7"
+                            Margin="0,0,0,16" ClipToBounds="True">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Padding="10,9"
+                                    Command="{Binding SetSpotifyModeCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+                                        <Setter Property="Background" Value="#0D0D0D" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EditIsSpotifyMode}" Value="True">
+                                                <Setter Property="Background" Value="#1C1C1C" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <TextBlock Text="🎵  Spotify" FontSize="12" />
+                            </Button>
+                            <Button Grid.Column="1" Padding="10,9"
+                                    Command="{Binding SetMp3ModeCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+                                        <Setter Property="Background" Value="#0D0D0D" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EditIsSpotifyMode}" Value="False">
+                                                <Setter Property="Background" Value="#1C1C1C" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <TextBlock Text="📂  MP3 File" FontSize="12" />
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Spotify inputs -->
+                    <StackPanel Visibility="{Binding EditIsSpotifyMode, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="Spotify track URL or URI:"
+                                   FontSize="11" Foreground="#888888" Margin="0,0,0,6" />
+                        <TextBox Text="{Binding EditUri, UpdateSourceTrigger=PropertyChanged}"
+                                 FontSize="13" Padding="10,8">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding SaveEditSoundCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <TextBlock Text="Start time:" FontSize="11" Foreground="#888888" Margin="0,10,0,6" />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBox Text="{Binding EditMinutes, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="56" FontSize="13" Padding="10,8"
+                                     GotKeyboardFocus="TimeField_GotFocus" />
+                            <TextBlock Text="min" FontSize="12" Foreground="#888888"
+                                       Margin="8,0,14,0" VerticalAlignment="Center" />
+                            <TextBox Text="{Binding EditSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="56" FontSize="13" Padding="10,8"
+                                     GotKeyboardFocus="TimeField_GotFocus" />
+                            <TextBlock Text="sec" FontSize="12" Foreground="#888888"
+                                       Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- MP3 inputs -->
+                    <StackPanel Visibility="{Binding EditIsSpotifyMode, Converter={StaticResource InverseBoolToVis}}">
+                        <TextBlock Text="Select an MP3 file from the sounds folder:"
+                                   FontSize="11" Foreground="#888888" Margin="0,0,0,6" />
+                        <TextBlock FontSize="11" Foreground="#666666"
+                                   HorizontalAlignment="Center" Margin="0,8">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding AvailableMp3Files.Count}" Value="0">
+                                            <Setter Property="Text" Value="No MP3 files found in the sounds folder." />
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <ListBox ItemsSource="{Binding AvailableMp3Files}"
+                                 SelectedItem="{Binding EditMp3File}"
+                                 Background="#1C1C1C"
+                                 BorderBrush="#444444"
+                                 BorderThickness="1"
+                                 MaxHeight="150"
+                                 FontFamily="Segoe UI"
+                                 FontSize="13">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Foreground" Value="#DDDDDD" />
+                                    <Setter Property="Padding" Value="10,7" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#4A3800" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#2A2A2A" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Margin="0,16,0,0">
+                        <Button Style="{StaticResource SidebarButton}"
+                                Background="#5A1A1A"
+                                Padding="14,9" Margin="0,0,8,0"
+                                Visibility="{Binding EditHasExisting, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding RemoveEditSoundCommand}">
+                            <TextBlock Text="Remove" FontSize="13" />
+                        </Button>
+                        <Button Style="{StaticResource SidebarButton}"
+                                Background="#2A2A2A"
+                                Padding="14,9" Margin="0,0,8,0"
+                                Command="{Binding CloseEditSoundCommand}">
+                            <TextBlock Text="Cancel" FontSize="13" />
+                        </Button>
+                        <Button Style="{StaticResource SidebarButton}"
+                                Background="#C9A84C"
+                                Foreground="#111111"
+                                Padding="14,9" Margin="0"
+                                Command="{Binding SaveEditSoundCommand}">
+                            <TextBlock Text="Save" FontSize="13" FontWeight="SemiBold" Foreground="#111111" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
