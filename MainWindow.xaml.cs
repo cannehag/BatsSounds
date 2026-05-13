@@ -42,6 +42,8 @@ public partial class MainWindow : Window
             Dispatcher.BeginInvoke(() => RecalculateLayout(PlayerList.ActualWidth, PlayerList.ActualHeight));
     }
 
+    private TaskCompletionSource<bool>? _updateTcs;
+
     private async Task CheckForUpdateAsync()
     {
         try
@@ -50,16 +52,32 @@ public partial class MainWindow : Window
             var release = await svc.CheckForUpdateAsync();
             if (release == null) return;
 
-            var result = MessageBox.Show(this,
-                $"Version {release.Version} is available.\n\nDownload and install now?",
-                "Update Available", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            _updateTcs = new TaskCompletionSource<bool>();
+            if (_vm != null)
+            {
+                _vm.UpdatePromptVersion = release.Version;
+                _vm.IsUpdatePromptOpen  = true;
+            }
 
-            if (result != MessageBoxResult.Yes) return;
+            bool accepted = await _updateTcs.Task;
+            if (!accepted) return;
 
             if (_vm != null) _vm.StatusMessage = "Downloading update...";
             await svc.DownloadAndInstallAsync(release);
         }
         catch { }
+    }
+
+    private void AcceptUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm != null) _vm.IsUpdatePromptOpen = false;
+        _updateTcs?.TrySetResult(true);
+    }
+
+    private void DismissUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm != null) _vm.IsUpdatePromptOpen = false;
+        _updateTcs?.TrySetResult(false);
     }
 
     private void PlayerList_SizeChanged(object sender, SizeChangedEventArgs e)

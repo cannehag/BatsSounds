@@ -35,6 +35,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _confirmRemovePitcherName = string.Empty;
     private PitcherViewModel? _pitcherToRemove;
     [ObservableProperty] private bool _isManageRostersOpen;
+    [ObservableProperty] private bool _isUpdatePromptOpen;
+    [ObservableProperty] private string _updatePromptVersion = string.Empty;
     [ObservableProperty] private string _newRosterName  = string.Empty;
     [ObservableProperty] private string _newRosterUrl   = string.Empty;
     [ObservableProperty] private RosterEntry? _editingRoster;

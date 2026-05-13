@@ -1557,8 +1557,8 @@
         <Grid Grid.ColumnSpan="2" Grid.RowSpan="4"
               Background="#AA000000"
               Visibility="{Binding IsManageRostersOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#1C1C1C" CornerRadius="12" Padding="24"
-                    MaxWidth="500" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border Background="#1C1C1C" CornerRadius="12" Padding="28"
+                    MaxWidth="660" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <StackPanel>
                     <TextBlock Text="Manage Rosters" FontSize="16" FontWeight="Bold" Margin="0,0,0,16" />
 
@@ -1682,6 +1682,34 @@
                                 <TextBlock Text="Add Roster" FontSize="13" FontWeight="Bold" Foreground="#111111" />
                             </Button>
                         </DockPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+        <!-- UPDATE PROMPT DIALOG -->
+        <Grid Grid.ColumnSpan="2" Grid.RowSpan="4"
+              Background="#AA000000"
+              Visibility="{Binding IsUpdatePromptOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="#1C1C1C" CornerRadius="12" Padding="28"
+                    MaxWidth="420" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="Update Available" FontSize="16" FontWeight="Bold" Margin="0,0,0,10" />
+                    <TextBlock Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,0,0,24">
+                        <Run Text="Version " />
+                        <Run Text="{Binding UpdatePromptVersion}" Foreground="#FFFFFF" FontWeight="SemiBold" />
+                        <Run Text=" is available. Would you like to download and install it now?" />
+                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource SidebarButton}"
+                                Background="#2A2A2A" Padding="16,9" Margin="0,0,10,0"
+                                Click="DismissUpdate_Click">
+                            <TextBlock Text="Later" FontSize="13" />
+                        </Button>
+                        <Button Style="{StaticResource SidebarButton}"
+                                Background="#C9A84C" Padding="16,9"
+                                Click="AcceptUpdate_Click">
+                            <TextBlock Text="Update Now" FontSize="13" FontWeight="SemiBold" Foreground="#111111" />
+                        </Button>
                     </StackPanel>
                 </StackPanel>
             </Border>
