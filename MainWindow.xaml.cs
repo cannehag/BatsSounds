@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using Bats_Sounds.Services;
 using Bats_Sounds.ViewModels;
 
@@ -34,8 +35,31 @@ public partial class MainWindow : Window
             playerConfigsDir, soundsDir, appDir);
         DataContext = _vm;
 
+        Title = $"Bats - Sound Control  v{UpdateService.CurrentVersion}";
+        Loaded += async (_, _) => await CheckForUpdateAsync();
+
         _vm.Players.CollectionChanged += (_, _) =>
             Dispatcher.BeginInvoke(() => RecalculateLayout(PlayerList.ActualWidth, PlayerList.ActualHeight));
+    }
+
+    private async Task CheckForUpdateAsync()
+    {
+        try
+        {
+            var svc     = new UpdateService();
+            var release = await svc.CheckForUpdateAsync();
+            if (release == null) return;
+
+            var result = MessageBox.Show(this,
+                $"Version {release.Version} is available.\n\nDownload and install now?",
+                "Update Available", MessageBoxButton.YesNo, MessageBoxImage.Information);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            if (_vm != null) _vm.StatusMessage = "Downloading update...";
+            await svc.DownloadAndInstallAsync(release);
+        }
+        catch { }
     }
 
     private void PlayerList_SizeChanged(object sender, SizeChangedEventArgs e)

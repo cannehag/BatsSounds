@@ -10,6 +10,8 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Bats_Sounds.ViewModels;
 
+public record RosterEntry(string Name, string Url);
+
 public partial class MainViewModel : ObservableObject
 {
     private readonly RosterService _rosterService;
@@ -21,17 +23,38 @@ public partial class MainViewModel : ObservableObject
     private readonly string _settingsFile;
     private readonly string _featuresFile;
     private readonly string _rostersDir;
-    private readonly string _pitchersFile;
     private CancellationTokenSource? _pollCts;
 
-    [ObservableProperty] private ObservableCollection<PlayerViewModel>     _players     = new();
-    [ObservableProperty] private ObservableCollection<SoundButtonViewModel> _soundButtons = new();
-    [ObservableProperty] private ObservableCollection<PitcherViewModel>    _pitchers     = new();
+    [ObservableProperty] private ObservableCollection<PlayerViewModel>      _players      = new();
+    [ObservableProperty] private ObservableCollection<SoundButtonViewModel>  _soundButtons = new();
+    [ObservableProperty] private ObservableCollection<PitcherViewModel>     _pitchers     = new();
+    [ObservableProperty] private ObservableCollection<RosterEntry>          _savedRosters = new();
+    [ObservableProperty] private RosterEntry? _selectedRoster;
     [ObservableProperty] private bool _isSelectPitcherOpen;
     [ObservableProperty] private bool _isConfirmRemovePitcherOpen;
     [ObservableProperty] private string _confirmRemovePitcherName = string.Empty;
     private PitcherViewModel? _pitcherToRemove;
-    [ObservableProperty] private string _rosterUrl = string.Empty;
+    [ObservableProperty] private bool _isManageRostersOpen;
+    [ObservableProperty] private string _newRosterName  = string.Empty;
+    [ObservableProperty] private string _newRosterUrl   = string.Empty;
+    [ObservableProperty] private RosterEntry? _editingRoster;
+    [ObservableProperty] private string _editRosterName = string.Empty;
+    [ObservableProperty] private string _editRosterUrl  = string.Empty;
+
+    public bool IsEditingRoster => EditingRoster != null;
+    partial void OnEditingRosterChanged(RosterEntry? value) => OnPropertyChanged(nameof(IsEditingRoster));
+
+    // Computed from SelectedRoster — used throughout roster-loading logic
+    public string RosterUrl => SelectedRoster?.Url ?? string.Empty;
+
+    partial void OnSelectedRosterChanged(RosterEntry? value)
+    {
+        OnPropertyChanged(nameof(RosterUrl));
+        Players.Clear();
+        Pitchers.Clear();
+        if (value != null) { LoadCachedRoster(); LoadPitchersFile(); SaveSettings(); }
+    }
+
     [ObservableProperty] private string _statusMessage = "Enter a roster URL and click Load.";
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private int _gridColumns = 4;
@@ -58,6 +81,7 @@ public partial class MainViewModel : ObservableObject
 
     // Currently active walkup/sound player
     private object? _playingSource; // PlayerViewModel or SoundButtonViewModel
+    private DateTime _playingSourceSetAt = DateTime.MinValue;
     // False after PlayTrackAsync (walkup); true after playlist start or pause-resume of playlist
     private bool _spotifyContextIsPlaylist;
 
@@ -98,7 +122,6 @@ public partial class MainViewModel : ObservableObject
         _soundsDir        = soundsDir;
         _settingsFile = Path.Combine(appDir, "settings.json");
         _featuresFile = Path.Combine(appDir, "features.json");
-        _pitchersFile = Path.Combine(appDir, "pitchers.json");
         _rostersDir   = Path.Combine(appDir, "rosters");
         Directory.CreateDirectory(_rostersDir);
 
@@ -113,12 +136,13 @@ public partial class MainViewModel : ObservableObject
         LoadFeaturesFile();
 
         var settings = LoadSettings();
-        RosterUrl         = settings.LastRosterUrl;
         _savedPlaylistUrl = settings.SpotifyPlaylistUrl;
         SavedPlaylistName = settings.SpotifyPlaylistName;
 
-        LoadCachedRoster();
-        LoadPitchersFile();
+        LoadRostersIndex(settings.LastRosterUrl);
+        SelectedRoster = SavedRosters.FirstOrDefault(r => r.Url == settings.LastRosterUrl)
+                      ?? SavedRosters.FirstOrDefault();
+        // LoadCachedRoster + LoadPitchersFile are now called from OnSelectedRosterChanged
 
         IsSpotifyAuthenticated = _spotifyWeb.IsAuthenticated;
         IsSpotifyPlaying       = _spotifyService.IsSpotifyPlaying();
@@ -155,6 +179,103 @@ public partial class MainViewModel : ObservableObject
         catch { }
     }
 
+    // ── Roster index ─────────────────────────────────────────────────────────
+
+    private string RostersIndexFile => Path.Combine(_rostersDir, "index.json");
+
+    private void LoadRostersIndex(string lastRosterUrl)
+    {
+        if (File.Exists(RostersIndexFile))
+        {
+            try
+            {
+                var entries = JsonSerializer.Deserialize<List<RosterEntry>>(File.ReadAllText(RostersIndexFile));
+                if (entries != null)
+                    foreach (var e in entries)
+                        SavedRosters.Add(e);
+            }
+            catch { }
+        }
+        else if (!string.IsNullOrWhiteSpace(lastRosterUrl))
+        {
+            // Migrate: create index from the previously saved URL
+            SavedRosters.Add(new RosterEntry("Roster", lastRosterUrl));
+            SaveRostersIndex();
+        }
+    }
+
+    private void SaveRostersIndex()
+    {
+        try { File.WriteAllText(RostersIndexFile, JsonSerializer.Serialize(SavedRosters.ToList())); }
+        catch { }
+    }
+
+    [RelayCommand]
+    private void OpenManageRosters() => IsManageRostersOpen = true;
+
+    [RelayCommand]
+    private void CloseManageRosters() => IsManageRostersOpen = false;
+
+    [RelayCommand]
+    private void AddNewRoster()
+    {
+        var name = NewRosterName.Trim();
+        var url  = NewRosterUrl.Trim();
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url)) return;
+        if (SavedRosters.Any(r => r.Url == url)) return;
+        var entry = new RosterEntry(name, url);
+        SavedRosters.Add(entry);
+        SaveRostersIndex();
+        SelectedRoster = entry;
+        NewRosterName  = string.Empty;
+        NewRosterUrl   = string.Empty;
+    }
+
+    [RelayCommand]
+    private void DeleteRoster(RosterEntry roster)
+    {
+        SavedRosters.Remove(roster);
+        SaveRostersIndex();
+        if (SelectedRoster == roster)
+            SelectedRoster = SavedRosters.FirstOrDefault();
+        if (EditingRoster == roster) CancelEditRoster();
+    }
+
+    [RelayCommand]
+    private void BeginEditRoster(RosterEntry roster)
+    {
+        EditingRoster  = roster;
+        EditRosterName = roster.Name;
+        EditRosterUrl  = roster.Url;
+    }
+
+    [RelayCommand]
+    private void CancelEditRoster()
+    {
+        EditingRoster  = null;
+        EditRosterName = string.Empty;
+        EditRosterUrl  = string.Empty;
+    }
+
+    [RelayCommand]
+    private void SaveEditRoster()
+    {
+        if (EditingRoster == null) return;
+        var name = EditRosterName.Trim();
+        var url  = EditRosterUrl.Trim();
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url)) return;
+        var updated = new RosterEntry(name, url);
+        var idx = SavedRosters.IndexOf(EditingRoster);
+        if (idx < 0) return;
+        var wasSelected = SelectedRoster == EditingRoster;
+        SavedRosters[idx] = updated;
+        SaveRostersIndex();
+        if (wasSelected) SelectedRoster = updated;
+        EditingRoster  = null;
+        EditRosterName = string.Empty;
+        EditRosterUrl  = string.Empty;
+    }
+
     // ── Roster cache ─────────────────────────────────────────────────────────
 
     private record SavedPlayer(string Name, int? BirthYear, string? ProfileUrl, string? ImagePath);
@@ -163,6 +284,12 @@ public partial class MainViewModel : ObservableObject
     {
         var hash = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(url.Trim())));
         return Path.Combine(_rostersDir, $"{hash}.json");
+    }
+
+    private string PitchersCacheFile(string url)
+    {
+        var hash = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(url.Trim())));
+        return Path.Combine(_rostersDir, $"{hash}_pitchers.json");
     }
 
     private void LoadCachedRoster()
@@ -215,6 +342,7 @@ public partial class MainViewModel : ObservableObject
         {
             Players.Clear();
             LoadCachedRoster();
+            LoadPitchersFile();
             SaveSettings();
             return;
         }
@@ -241,6 +369,7 @@ public partial class MainViewModel : ObservableObject
         foreach (var p in players)
             Players.Add(new PlayerViewModel(p, _playerConfigsDir));
 
+        LoadPitchersFile();
         SaveSettings();
         StatusMessage = $"Loaded {players.Count} players. Downloading images...";
 
@@ -490,14 +619,20 @@ public partial class MainViewModel : ObservableObject
 
     private void LoadPitchersFile()
     {
-        if (!File.Exists(_pitchersFile)) return;
+        Pitchers.Clear();
+        if (string.IsNullOrEmpty(RosterUrl)) return;
+        var file = PitchersCacheFile(RosterUrl);
+        if (!File.Exists(file)) return;
         try
         {
-            var saved = JsonSerializer.Deserialize<List<SavedPitcher>>(File.ReadAllText(_pitchersFile));
+            var saved = JsonSerializer.Deserialize<List<SavedPitcher>>(File.ReadAllText(file));
             if (saved == null) return;
             foreach (var s in saved)
             {
-                var imagePath = s.ImagePath != null && File.Exists(s.ImagePath) ? s.ImagePath : null;
+                // Prefer image from currently loaded Players (may be fresher than stored path)
+                var playerMatch = Players.FirstOrDefault(p => p.Name == s.Name && p.BirthYear == s.BirthYear);
+                var imagePath = playerMatch?.ImagePath
+                    ?? (s.ImagePath != null && File.Exists(s.ImagePath) ? s.ImagePath : null);
                 Pitchers.Add(new PitcherViewModel(s.Name, s.BirthYear, imagePath, _playerConfigsDir));
             }
         }
@@ -506,10 +641,11 @@ public partial class MainViewModel : ObservableObject
 
     private void SavePitchersFile()
     {
+        if (string.IsNullOrEmpty(RosterUrl)) return;
         try
         {
             var saved = Pitchers.Select(p => new SavedPitcher(p.Name, p.BirthYear, p.ImagePath)).ToList();
-            File.WriteAllText(_pitchersFile, JsonSerializer.Serialize(saved));
+            File.WriteAllText(PitchersCacheFile(RosterUrl), JsonSerializer.Serialize(saved));
         }
         catch { }
     }
@@ -710,15 +846,21 @@ public partial class MainViewModel : ObservableObject
             var info = await _spotifyWeb.GetCurrentPlaybackAsync();
             IsSpotifyPlaying = info?.IsPlaying ?? false;
 
-            // Auto-clear playing source when their Spotify track ends or changes
+            // Auto-clear playing source when their Spotify track ends or changes.
+            // MP3 sources (activeUri == null) are cleared by AudioService.PlaybackStopped — skip here.
+            // For Spotify sources, wait 4 s after playback starts before checking, to allow
+            // Spotify's state to propagate (avoids false-clearing due to API lag).
             if (_playingSource != null && info != null)
             {
                 var activeUri = _playingSource is PlayerViewModel pvm       ? pvm.Config?.SpotifyUri
                               : _playingSource is PitcherViewModel pitcher   ? pitcher.Config?.SpotifyUri
                               : _playingSource is SoundButtonViewModel sbvm  ? sbvm.Config?.SpotifyUri
                               : null;
-                bool stillOn = activeUri != null && info.TrackUri == activeUri && info.IsPlaying;
-                if (!stillOn) SetPlayingSource(null);
+                if (activeUri != null && (DateTime.UtcNow - _playingSourceSetAt).TotalSeconds > 4)
+                {
+                    bool stillOn = info.TrackUri == activeUri && info.IsPlaying;
+                    if (!stillOn) SetPlayingSource(null);
+                }
             }
 
             IsPlaylistPlaying = IsSpotifyPlaying && _playingSource == null;
@@ -742,13 +884,16 @@ public partial class MainViewModel : ObservableObject
     {
         _pollCts?.Cancel();
         _pollCts = new CancellationTokenSource();
-        var ct = _pollCts.Token;
-        _ = Task.Run(async () =>
+        var timer = new System.Windows.Threading.DispatcherTimer
         {
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
-            while (await timer.WaitForNextTickAsync(ct))
-                await RefreshPlaybackAsync();
-        }, ct);
+            Interval = TimeSpan.FromSeconds(5)
+        };
+        timer.Tick += async (_, _) =>
+        {
+            if (_pollCts.IsCancellationRequested) { timer.Stop(); return; }
+            await RefreshPlaybackAsync();
+        };
+        timer.Start();
     }
 
     private async Task TryFetchSavedPlaylistNameAsync()
@@ -802,6 +947,7 @@ public partial class MainViewModel : ObservableObject
         if (_playingSource is SoundButtonViewModel sbvm) sbvm.IsPlaying    = false;
         _playingSource     = source;
         IsAnySourcePlaying = source != null;
+        if (source != null) _playingSourceSetAt = DateTime.UtcNow;
         if (source is PlayerViewModel newPvm)
         {
             newPvm.IsPlaying    = true;

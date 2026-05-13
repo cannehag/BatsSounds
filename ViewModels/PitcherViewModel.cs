@@ -23,6 +23,11 @@ public partial class PitcherViewModel : ObservableObject
     public string? ConfigSummary =>
         Config?.TrackName ?? (Config?.Mp3FileName != null ? $"📂 {Config.Mp3FileName}" : null);
 
+    public string? StartTimeDisplay =>
+        Config == null ? null :
+        Config.StartPositionMs == 0 ? "From beginning" :
+        $"From {Config.StartMinutes}:{Config.StartSeconds:D2}";
+
     public PitcherViewModel(string name, int? birthYear, string? imagePath, string configDir)
     {
         _configDir = configDir;
@@ -43,6 +48,7 @@ public partial class PitcherViewModel : ObservableObject
                 Config    = cfg;
                 HasConfig = cfg != null;
                 OnPropertyChanged(nameof(ConfigSummary));
+                OnPropertyChanged(nameof(StartTimeDisplay));
                 return;
             }
             catch { }
@@ -50,6 +56,7 @@ public partial class PitcherViewModel : ObservableObject
         Config    = null;
         HasConfig = false;
         OnPropertyChanged(nameof(ConfigSummary));
+        OnPropertyChanged(nameof(StartTimeDisplay));
     }
 
     public void SaveConfig(SoundConfig config)
@@ -59,6 +66,7 @@ public partial class PitcherViewModel : ObservableObject
         Config    = config;
         HasConfig = true;
         OnPropertyChanged(nameof(ConfigSummary));
+        OnPropertyChanged(nameof(StartTimeDisplay));
     }
 
     public void ClearConfig()
@@ -68,6 +76,7 @@ public partial class PitcherViewModel : ObservableObject
         Config    = null;
         HasConfig = false;
         OnPropertyChanged(nameof(ConfigSummary));
+        OnPropertyChanged(nameof(StartTimeDisplay));
     }
 
     public void UpdateImagePath(string? path) => ImagePath = path;

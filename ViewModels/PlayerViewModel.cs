@@ -25,6 +25,11 @@ public partial class PlayerViewModel : ObservableObject
         Config?.TrackName
         ?? (Config?.Mp3FileName != null ? $"📂 {Config.Mp3FileName}" : null);
 
+    public string? StartTimeDisplay =>
+        Config == null ? null :
+        Config.StartPositionMs == 0 ? "From beginning" :
+        $"From {Config.StartMinutes}:{Config.StartSeconds:D2}";
+
     public PlayerViewModel(Player player, string configDir)
     {
         _configDir = configDir;
@@ -45,6 +50,7 @@ public partial class PlayerViewModel : ObservableObject
                 Config    = cfg;
                 HasConfig = cfg != null;
                 OnPropertyChanged(nameof(ConfigSummary));
+                OnPropertyChanged(nameof(StartTimeDisplay));
                 return;
             }
             catch { }
@@ -52,6 +58,7 @@ public partial class PlayerViewModel : ObservableObject
         Config    = null;
         HasConfig = false;
         OnPropertyChanged(nameof(ConfigSummary));
+        OnPropertyChanged(nameof(StartTimeDisplay));
     }
 
     public void SaveConfig(SoundConfig config)
@@ -61,6 +68,7 @@ public partial class PlayerViewModel : ObservableObject
         Config    = config;
         HasConfig = true;
         OnPropertyChanged(nameof(ConfigSummary));
+        OnPropertyChanged(nameof(StartTimeDisplay));
     }
 
     public void ClearConfig()
@@ -70,6 +78,7 @@ public partial class PlayerViewModel : ObservableObject
         Config    = null;
         HasConfig = false;
         OnPropertyChanged(nameof(ConfigSummary));
+        OnPropertyChanged(nameof(StartTimeDisplay));
     }
 
     public void UpdateImagePath(string? path) => ImagePath = path;
