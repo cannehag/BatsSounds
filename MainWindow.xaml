@@ -1640,11 +1640,13 @@
 
                     <!-- Edit form — shown when editing an existing roster -->
                     <StackPanel Visibility="{Binding IsEditingRoster, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Edit Roster" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <TextBlock Text="Edit Roster" FontWeight="SemiBold" Margin="0,0,0,12" />
+                        <TextBlock Text="Name" FontSize="11" Foreground="#888888" Margin="0,0,0,4" />
                         <TextBox Text="{Binding EditRosterName, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,0,0,6" />
+                                 Margin="0,0,0,10" />
+                        <TextBlock Text="Roster URL" FontSize="11" Foreground="#888888" Margin="0,0,0,4" />
                         <TextBox Text="{Binding EditRosterUrl, UpdateSourceTrigger=PropertyChanged}" />
-                        <DockPanel Margin="0,10,0,0">
+                        <DockPanel Margin="0,12,0,0">
                             <Button DockPanel.Dock="Right"
                                     Style="{StaticResource SidebarButton}"
                                     Background="#2A2A2A" Padding="14,9"
@@ -1661,11 +1663,13 @@
 
                     <!-- Add form — shown when not editing -->
                     <StackPanel Visibility="{Binding IsEditingRoster, Converter={StaticResource InverseBoolToVis}}">
-                        <TextBlock Text="Add Roster" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <TextBlock Text="Add Roster" FontWeight="SemiBold" Margin="0,0,0,12" />
+                        <TextBlock Text="Name" FontSize="11" Foreground="#888888" Margin="0,0,0,4" />
                         <TextBox Text="{Binding NewRosterName, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,0,0,6" />
+                                 Margin="0,0,0,10" />
+                        <TextBlock Text="Roster URL" FontSize="11" Foreground="#888888" Margin="0,0,0,4" />
                         <TextBox Text="{Binding NewRosterUrl, UpdateSourceTrigger=PropertyChanged}" />
-                        <DockPanel Margin="0,10,0,0">
+                        <DockPanel Margin="0,12,0,0">
                             <Button DockPanel.Dock="Right"
                                     Style="{StaticResource SidebarButton}"
                                     Background="#2A2A2A" Padding="14,9"
