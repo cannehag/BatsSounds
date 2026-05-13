@@ -2,3 +2,12 @@
 **/bin
 **/obj
 **/*.csproj.user
+
+# Runtime data — never commit these
+spotify_tokens.json
+settings.json
+features.json
+pitchers.json
+images/
+sounds/
+rosters/
